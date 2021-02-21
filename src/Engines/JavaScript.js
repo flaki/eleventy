@@ -50,12 +50,12 @@ class JavaScript extends TemplateEngine {
     }
   }
 
-  getInstanceFromInputPath(inputPath) {
+  async getInstanceFromInputPath(inputPath) {
     if (this.instances[inputPath]) {
       return this.instances[inputPath];
     }
 
-    const mod = this._getRequire(inputPath);
+    const mod = await this._getRequire(inputPath);
     let inst = this._getInstance(mod);
 
     if (inst) {
@@ -68,9 +68,21 @@ class JavaScript extends TemplateEngine {
     return inst;
   }
 
-  _getRequire(inputPath) {
+  async _getRequire(inputPath) {
     let requirePath = TemplatePath.absolutePath(inputPath);
-    return require(requirePath);
+    try {
+      const { default: mod } = await import(requirePath);
+      // TODO: Is there ever a need to handle non-default exports for
+      // template files?
+      return mod;
+    }
+    catch (e) {
+      console.log('import failed in _getRequire', inputPath, e);
+      // TODO: Needs proper error handling because there could be
+      // unrelated errors swallowed in the imported script and a
+      // misleading require error is shown instead
+      return require(requirePath);
+    }
   }
 
   needsToReadFileContents() {
@@ -90,7 +102,7 @@ class JavaScript extends TemplateEngine {
   }
 
   async getExtraDataFromFile(inputPath) {
-    let inst = this.getInstanceFromInputPath(inputPath);
+    let inst = await this.getInstanceFromInputPath(inputPath);
     return await getJavaScriptData(inst, inputPath);
   }
 
@@ -116,7 +128,7 @@ class JavaScript extends TemplateEngine {
       inst = this._getInstance(str);
     } else {
       // For normal templates, str will be falsy.
-      inst = this.getInstanceFromInputPath(inputPath);
+      inst = await this.getInstanceFromInputPath(inputPath);
     }
     if (inst && "render" in inst) {
       return function (data) {
