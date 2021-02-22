@@ -1,4 +1,4 @@
-const dependencyTree = require("@11ty/dependency-tree");
+const dependencyTree = require("dependency-tree");
 const TemplatePath = require("./TemplatePath");
 const deleteRequireCache = require("./Util/DeleteRequireCache");
 
@@ -69,13 +69,13 @@ class EleventyWatchTargets {
   }
 
   // add only a target’s dependencies
-  addDependencies(targets, filterCallback) {
+  async addDependencies(targets, filterCallback) {
     if (!this.watchJavaScriptDependencies) {
       return;
     }
 
     targets = this._normalizeTargets(targets);
-    let deps = this.getJavaScriptDependenciesFromList(targets);
+    let deps = await this.getJavaScriptDependenciesFromList(targets);
     if (filterCallback) {
       deps = deps.filter(filterCallback);
     }
@@ -87,22 +87,33 @@ class EleventyWatchTargets {
     this.writer = templateWriter;
   }
 
-  getJavaScriptDependenciesFromList(files = []) {
+  async getJavaScriptDependenciesFromList(files = []) {
     let depSet = new Set();
-    files
-      .filter(file => file.endsWith(".js") || file.endsWith(".cjs")) // TODO does this need to work with aliasing? what other JS extensions will have deps?
-      .forEach(file => {
-        dependencyTree(file, { allowNotFound: true })
-          .map(dependency => {
-            return TemplatePath.addLeadingDotSlash(
-              TemplatePath.relativePath(dependency)
-            );
-          })
-          .forEach(dependency => {
-            depSet.add(dependency);
-          });
+    
+    const depfiles = files
+      .filter(file => file.endsWith(".js") || file.endsWith(".cjs"));
+      // TODO does this need to work with aliasing? what other JS extensions will have deps?
+
+    for (const file of depfiles) {
+      const tree = dependencyTree({
+        filename: file,
+        directory: TemplatePath.absolutePath('.'),
+        filter: path => path.indexOf('node_modules') === -1,
+        isListForm: true,
       });
 
+      // remove the last item (self)
+      const esTree = tree.slice(0,tree.length-1);
+
+      esTree.map(dependency => {
+        return TemplatePath.addLeadingDotSlash(
+          TemplatePath.relativePath(dependency)
+        );
+      })
+      .forEach(dependency => {
+        depSet.add(dependency);
+      });
+    }
     return Array.from(depSet);
   }
 

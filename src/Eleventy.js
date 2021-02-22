@@ -630,21 +630,21 @@ Arguments:
     }
 
     // Template files .11ty.js
-    this.watchTargets.addDependencies(this.eleventyFiles.getWatchPathCache());
+    await this.watchTargets.addDependencies(this.eleventyFiles.getWatchPathCache());
 
     // Config file dependencies
-    this.watchTargets.addDependencies(
+    await this.watchTargets.addDependencies(
       config.getLocalProjectConfigFile(),
       filterOutGlobalDataFiles
     );
 
     // Deps from Global Data (that aren’t in the global data directory, everything is watched there)
-    this.watchTargets.addDependencies(
+    await this.watchTargets.addDependencies(
       this.templateData.getWatchPathCache(),
       filterOutGlobalDataFiles
     );
 
-    this.watchTargets.addDependencies(
+    await this.watchTargets.addDependencies(
       await this.eleventyFiles.getWatcherTemplateJavaScriptDataFiles()
     );
   }
