@@ -156,7 +156,16 @@ class TemplateConfig {
       TemplatePath.getWorkingDir(),
       localProjectConfigPath
     );
-    debug(`Merging config with ${path}`);
+
+    // Attempt loading .cjs version if exists
+    let cjspath = path.replace(/\.js$/,'.cjs');
+    if (fs.existsSync(cjspath)) {
+      path = cjspath;
+      debug(`Found .cjs config file, merging config with ${path}`);
+    } else {
+      debug(`Merging config with ${path}`);
+
+    }
 
     if (fs.existsSync(path)) {
       try {
